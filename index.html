@@ -19,6 +19,7 @@
         input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         button { background-color: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
         button:hover { background-color: #1b5e20; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
         
         /* Mensagens de Feedback */
         .msg { padding: 10px; border-radius: 4px; margin-top: 10px; text-align: center; }
@@ -77,6 +78,7 @@
 
         <h3>Produtos Cadastrados ({{ produtos.length }})</h3>
         <div v-if="loadingLista">Carregando estoque...</div>
+        <div v-if="!loadingLista && produtos.length === 0">Nenhum produto cadastrado ainda.</div>
         
         <div class="product-list">
             <div v-for="prod in produtos" :key="prod.id" class="product-card">
@@ -93,9 +95,8 @@
     const { createApp } = Vue
 
     // --- CONFIGURAÇÃO DA API ---
-    // IMPORTANTE: TROQUE ESTA URL PELA URL QUE O RENDER TE DER APÓS O DEPLOY
-    // Exemplo: 'https://greeneats-seu-projeto.onrender.com'
-    const API_URL = 'https://greeneats-backend.onrender.com/'; // URL temporária local ou substituir pela do Render
+    // URL do seu Backend no Render (Já atualizada!)
+    const API_URL = 'https://greeneats-backend.onrender.com';
 
     createApp({
         data() {
@@ -125,6 +126,7 @@
                     }
                 } catch (error) {
                     console.error("Erro ao conectar na API:", error);
+                    this.feedback = { msg: 'Não foi possível carregar os produtos.', tipo: 'error', erros: [] };
                 } finally {
                     this.loadingLista = false;
                 }
@@ -146,13 +148,13 @@
                     if (response.ok) {
                         this.feedback = { msg: 'Produto cadastrado com sucesso!', tipo: 'success', erros: [] };
                         this.novoProduto = { titulo: '', preco: '', categoria: '' }; // Limpa formulário
-                        this.listarProdutos(); // Atualiza a lista
+                        this.listarProdutos(); // Atualiza a lista na hora
                     } else {
-                        // Captura erros da validação do backend (Parte 2)
+                        // Captura erros da validação do backend
                         this.feedback = { 
                             msg: dados.mensagem || 'Erro ao cadastrar:', 
                             tipo: 'error', 
-                            erros: dados.erros || [dados.erro] 
+                            erros: dados.erros || [dados.erro || 'Verifique os dados'] 
                         };
                     }
                 } catch (error) {
