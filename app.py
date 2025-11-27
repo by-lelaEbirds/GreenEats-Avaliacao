@@ -7,8 +7,10 @@ app = Flask(__name__)
 CORS(app)
 
 # --- CONFIGURAÇÃO DO AIRTABLE ---
-AIRTABLE_API_KEY = os.environ.get('patHgHr8ijsAmL1hH.f491a5dafc8af5b6c1f52a7d55c639e106336c3d82abf28b6cb31f6556e6560a')
-AIRTABLE_BASE_ID = os.environ.get('apptcBf1P3li7IgjI')
+# ATENÇÃO: Aqui usamos os NOMES das variáveis definidas no Render
+# Não cole a chave direta aqui, deixe 'AIRTABLE_KEY'
+AIRTABLE_API_KEY = os.environ.get('AIRTABLE_KEY')
+AIRTABLE_BASE_ID = os.environ.get('AIRTABLE_BASE_ID')
 TABLE_NAME = 'Produtos'
 
 # Inicializa conexão
@@ -17,16 +19,18 @@ if AIRTABLE_API_KEY and AIRTABLE_BASE_ID:
     try:
         api = Api(AIRTABLE_API_KEY)
         table = api.table(AIRTABLE_BASE_ID, TABLE_NAME)
-        print("LOG: Conexão com Airtable iniciada.")
+        print("LOG: Conexão com Airtable iniciada com sucesso.")
     except Exception as e:
         print(f"LOG: Erro ao iniciar Airtable: {e}")
 else:
+    # Se entrar aqui, é porque o Render não passou as variáveis
     print("ERRO CRÍTICO: As chaves do Airtable não foram encontradas no Render.")
+    print(f"DEBUG: Chave recebida: {AIRTABLE_API_KEY} | ID recebido: {AIRTABLE_BASE_ID}")
 
-# --- ROTA RAIZ (Para corrigir o 404) ---
+# --- ROTA RAIZ ---
 @app.route('/', methods=['GET'])
 def home():
-    status = "Conectado 🟢" if table else "Desconectado 🔴 (Verifique as Variáveis de Ambiente)"
+    status = "Conectado 🟢" if table else "Desconectado 🔴 (Erro de Config)"
     return jsonify({
         "sistema": "GreenEats API",
         "status_banco": status
@@ -38,7 +42,6 @@ def validar_produto():
     data = request.json
     erros = []
     
-    # Validações
     try:
         if float(data.get('preco', 0)) <= 0: erros.append("O preço deve ser maior que zero.")
     except: erros.append("Preço inválido.")
@@ -56,9 +59,8 @@ def validar_produto():
 def listar_produtos():
     if not table: return jsonify({"erro": "Banco desconectado"}), 500
     try:
-        # Pega todos os registros do Airtable
         registros = table.all()
-        # Limpa o formato para enviar pro front
+        # Formata os dados para o frontend
         dados_limpos = [{"id": r['id'], **r['fields']} for r in registros]
         return jsonify(dados_limpos)
     except Exception as e:
