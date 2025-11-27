@@ -1,55 +1,69 @@
-# 🥬 GreenEats - Documentação do Projeto
+# 🥬 GreenEats - Documentação Técnica e Gestão
 
-## 📌 Parte 1: Gestão Ágil e Conceção
+## 📌 Parte 1: Gestão Ágil (User Stories & Kanban)
 
 ### 1. Histórias de Usuário (User Stories) - MVP
-*Focadas no cadastro e listagem de produtos.*
+*Focadas no cadastro e controle de qualidade.*
 
 1.  **Cadastro de Produtos:**
-    * "Como **Agricultor Parceiro**, quero **cadastrar meus produtos com nome, preço e categoria**, para que **eles fiquem disponíveis para venda no marketplace.**"
-2.  **Validação de Dados:**
-    * "Como **Sistema**, quero **impedir cadastros com preços negativos ou nomes muito curtos**, para que **a contabilidade e a apresentação da loja não sejam prejudicadas.**"
-3.  **Visualização de Estoque:**
-    * "Como **Administrador/Agricultor**, quero **ver uma lista atualizada de todos os produtos cadastrados**, para que **eu possa conferir o que está à venda.**"
+    * "Como **Agricultor Parceiro**, quero **cadastrar meus produtos com título, preço e categoria**, para que **eles fiquem disponíveis imediatamente no marketplace.**"
+2.  **Validação Automática:**
+    * "Como **Administrador do Sistema**, quero **que o sistema rejeite automaticamente cadastros com dados inválidos (preço negativo ou nome curto)**, para que **a integridade da contabilidade seja mantida.**"
+3.  **Gestão de Estoque:**
+    * "Como **Administrador**, quero **visualizar uma lista atualizada de todos os produtos**, para que **eu possa conferir o que está sendo ofertado.**"
 
----
+### 2. Quadro Kanban (Fluxo de Trabalho)
 
-### 2. Product Backlog (Visão Geral)
-*Lista de desejos para o produto completo.*
-
-* [MVP] Módulo de Cadastro de Produtos (Backend API)
-* [MVP] Validação de Regras de Negócio (Preço > 0, Categorias)
-* [MVP] Interface de Listagem e Cadastro (Frontend)
-* [Futuro] Edição de Produtos (PUT)
-* [Futuro] Remoção de Produtos (DELETE)
-* [Futuro] Login e Autenticação de Agricultores
-* [Futuro] Carrinho de Compras para o Consumidor
-
----
-
-### 3. Sprint Backlog (O que foi feito nesta entrega)
-*Foco: Validação e CRUD Básico (Create/Read).*
-
-* **Backend (Python/Flask):**
-    * Configuração do Ambiente e Airtable.
-    * Implementação da Rota `POST /validar-produto` (Regras de Negócio).
-    * Implementação da Rota `POST /produtos` (Salvar no banco).
-    * Implementação da Rota `GET /produtos` (Listar do banco).
-* **Frontend (Vue.js + Tailwind):**
-    * Criação do Formulário de Cadastro.
-    * Integração com API (Fetch/Axios).
-    * Design Responsivo e Feedback visual de erros.
-
----
-
-### 4. Quadro Kanban (Status Final)
-
-| To Do (Futuro) | Doing (Em Progresso) | Done (Concluído) ✅ |
+| Backlog / To Do (Futuro) | Doing (Em Progresso) | Done (Concluído) ✅ |
 | :--- | :--- | :--- |
-| Rota de Edição (PUT) | Gravação do Vídeo Demo | **Definição de User Stories** |
-| Rota de Exclusão (DELETE) | | **Setup do Backend (Flask)** |
-| Upload de Imagens Reais | | **Conexão com Airtable** |
-| Tela de Login | | **Endpoint de Validação** |
-| | | **Integração Frontend (Vue.js)** |
-| | | **Deploy no Render (Web Service)** |
-| | | **Deploy no Render (Static Site)** |
+| Implementar Edição (PUT) | Gravação do Vídeo Demo | **Definição de User Stories** |
+| Implementar Exclusão (DELETE) | | **Setup Backend (Flask + Airtable)** |
+| Upload de Imagens | | **Rota POST /validar-produto** |
+| Login de Usuários | | **Rota POST e GET /produtos** |
+| | | **Frontend Vue.js Integrado** |
+| | | **Deploy no Render** |
+
+---
+
+## 📌 Parte 2 e 3: Arquitetura da API (Backend)
+
+### Modelo de Dados (Entidade Produto)
+A tabela `Produtos` no Airtable possui a seguinte estrutura:
+* `id`: String (Gerado automaticamente pelo Airtable)
+* `titulo`: String (Min. 5 caracteres)
+* `preco`: Number (Float, deve ser > 0)
+* `categoria`: String (Enum: 'Fruta', 'Legume', 'Verdura')
+
+### Definição das Rotas (CRUD Completo)
+*Conforme solicitado na avaliação, aqui está a definição da estrutura RESTful:*
+
+| Ação | Método HTTP | Rota (Endpoint) | Status (Projeto) |
+| :--- | :--- | :--- | :--- |
+| **Criar** | `POST` | `/produtos` | ✅ **Implementado** |
+| **Ler (Listar)** | `GET` | `/produtos` | ✅ **Implementado** |
+| **Validar** | `POST` | `/validar-produto` | ✅ **Implementado** (Regra de Negócio) |
+| **Atualizar** | `PUT` | `/produtos/<id>` | 📝 *Planejado (Backlog)* |
+| **Apagar** | `DELETE` | `/produtos/<id>` | 📝 *Planejado (Backlog)* |
+
+---
+
+## 📌 Parte 4: Integração Frontend (Conceito)
+
+**Ciclo de Vida do Componente:**
+A requisição para buscar os produtos é feita no momento de **montagem** do componente.
+* No **Vue.js**, utilizamos o hook `mounted()`.
+* *(Se fosse React, usaríamos `useEffect` com array vazio).*
+
+**Trecho de Código Utilizado (Consumo da API):**
+```javascript
+// Método chamado automaticamente no mounted()
+async listarProdutos() {
+    try {
+        // Consome a rota GET definida no Backend
+        const response = await fetch('[https://greeneats-backend.onrender.com/produtos](https://greeneats-backend.onrender.com/produtos)');
+        // Armazena o resultado no estado da aplicação (data)
+        this.produtos = await response.json();
+    } catch (error) {
+        console.error("Erro na integração", error);
+    }
+}
