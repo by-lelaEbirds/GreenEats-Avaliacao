@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenEats - Gestão de Produtos</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+
+<div id="app">
+    <h1>🥬 GreenEats - Painel do Agricultor</h1>
+
+    <div class="card">
+        <h3>Novo Produto</h3>
+        <input type="text" v-model="novoProduto.titulo" placeholder="Título (min 5 chars)">
+        <input type="number" v-model="novoProduto.preco" placeholder="Preço">
+        <select v-model="novoProduto.categoria">
+            <option disabled value="">Escolha a categoria</option>
+            <option>Fruta</option>
+            <option>Legume</option>
+            <option>Verdura</option>
+        </select>
+        <button @click="criarProduto">Cadastrar</button>
+        <p v-if="mensagem" :class="tipoMensagem">{{ mensagem }}</p>
+    </div>
+
+    <h3>Produtos Disponíveis</h3>
+    <div v-if="loading">Carregando...</div>
+    <div v-for="produto in produtos" :key="produto.id" class="card">
+        <strong>{{ produto.titulo }}</strong> - R$ {{ produto.preco }} <br>
+        <small>{{ produto.categoria }}</small>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue
+
+    createApp({
+        data() {
+            return {
+                // URL do seu Backend no Render (ALTERAR DEPOIS DO DEPLOY)
+                apiUrl: 'https://SEU-APP-NO-RENDER.onrender.com', 
+                produtos: [],
+                novoProduto: { titulo: '', preco: '', categoria: '' },
+                mensagem: '',
+                tipoMensagem: '',
+                loading: false
+            }
+        },
+        // RESPOSTA TEÓRICA: O fetch é feito no mounted()
+        mounted() {
+            this.carregarProdutos()
+        },
+        methods: {
+            async carregarProdutos() {
+                this.loading = true;
+                try {
+                    // Consumindo a rota GET /produtos
+                    const response = await fetch(`${this.apiUrl}/produtos`);
+                    this.produtos = await response.json();
+                } catch (error) {
+                    console.error("Erro ao buscar", error);
+                } finally {
+                    this.loading = false;
+                }
+            },
+            async criarProduto() {
+                // Validação Front antes de enviar (opcional, mas boa prática)
+                // Enviando para a rota POST /produtos
+                try {
+                    const response = await fetch(`${this.apiUrl}/produtos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.novoProduto)
+                    });
+                    
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        this.mensagem = "Produto criado!";
+                        this.tipoMensagem = "success";
+                        this.carregarProdutos(); // Recarrega a lista
+                        this.novoProduto = { titulo: '', preco: '', categoria: '' };
+                    } else {
+                        // Mostra erro da validação do backend (Parte 2)
+                        this.mensagem = data.erro || "Erro na validação";
+                        this.tipoMensagem = "error";
+                    }
+                } catch (error) {
+                    this.mensagem = "Erro de conexão";
+                }
+            }
+        }
+    }).mount('#app')
+</script>
+
+</body>
+</html>
