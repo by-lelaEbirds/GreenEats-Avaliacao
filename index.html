@@ -1,171 +1,265 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html class="dark" lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GreenEats - Gestão de Produtos</title>
+    <title>GreenEats - Painel Administrativo</title>
+    
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     
-    <style>
-        /* Estilos CSS Básicos */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f9f4; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
-        h1 { color: #2e7d32; text-align: center; }
-        .container { display: flex; flex-direction: column; gap: 20px; }
-        
-        /* Card de Formulário */
-        .form-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #2e7d32; }
-        .form-group { margin-bottom: 10px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { background-color: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
-        button:hover { background-color: #1b5e20; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        
-        /* Mensagens de Feedback */
-        .msg { padding: 10px; border-radius: 4px; margin-top: 10px; text-align: center; }
-        .msg.success { background-color: #dcedc8; color: #33691e; }
-        .msg.error { background-color: #ffcdd2; color: #b71c1c; }
-        
-        /* Lista de Produtos */
-        .product-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        .product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
-        .badge { position: absolute; top: 10px; right: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .price { font-size: 1.2em; font-weight: bold; color: #2e7d32; margin: 10px 0; }
-    </style>
-</head>
-<body>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 
-<div id="app">
-    <h1>🥬 GreenEats - Admin</h1>
-
-    <div class="container">
-        <div class="form-card">
-            <h3>Novo Produto Orgânico</h3>
-            
-            <div class="form-group">
-                <label>Título do Produto (Min. 5 letras):</label>
-                <input type="text" v-model="novoProduto.titulo" placeholder="Ex: Tomate Cereja Orgânico">
-            </div>
-
-            <div class="form-group">
-                <label>Preço (R$):</label>
-                <input type="number" step="0.01" v-model="novoProduto.preco" placeholder="0.00">
-            </div>
-
-            <div class="form-group">
-                <label>Categoria:</label>
-                <select v-model="novoProduto.categoria">
-                    <option disabled value="">Selecione...</option>
-                    <option>Fruta</option>
-                    <option>Legume</option>
-                    <option>Verdura</option>
-                </select>
-            </div>
-
-            <button @click="salvarProduto" :disabled="loading">
-                {{ loading ? 'Salvando...' : 'Cadastrar Produto' }}
-            </button>
-
-            <div v-if="feedback.msg" :class="['msg', feedback.tipo]">
-                {{ feedback.msg }}
-                <ul v-if="feedback.erros.length">
-                    <li v-for="erro in feedback.erros">{{ erro }}</li>
-                </ul>
-            </div>
-        </div>
-
-        <hr>
-
-        <h3>Produtos Cadastrados ({{ produtos.length }})</h3>
-        <div v-if="loadingLista">Carregando estoque...</div>
-        <div v-if="!loadingLista && produtos.length === 0">Nenhum produto cadastrado ainda.</div>
-        
-        <div class="product-list">
-            <div v-for="prod in produtos" :key="prod.id" class="product-card">
-                <span class="badge">{{ prod.categoria }}</span>
-                <h4>{{ prod.titulo }}</h4>
-                <div class="price">R$ {{ prod.preco }}</div>
-                <small>ID: {{ prod.id }}</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    const { createApp } = Vue
-
-    // --- CONFIGURAÇÃO DA API ---
-    // URL do seu Backend no Render (Já atualizada!)
-    const API_URL = 'https://greeneats-backend.onrender.com';
-
-    createApp({
-        data() {
-            return {
-                produtos: [],
-                novoProduto: {
-                    titulo: '',
-                    preco: '',
-                    categoria: ''
-                },
-                feedback: { msg: '', tipo: '', erros: [] },
-                loading: false,
-                loadingLista: false
-            }
-        },
-        // Ciclo de vida: Mounted é executado assim que a tela abre
-        mounted() {
-            this.listarProdutos()
-        },
-        methods: {
-            async listarProdutos() {
-                this.loadingLista = true;
-                try {
-                    const response = await fetch(`${API_URL}/produtos`);
-                    if(response.ok) {
-                        this.produtos = await response.json();
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": { DEFAULT: "#10B981", hover: "#059669" }, // Verde Saturação
+                        "secondary": "#F59E0B", // Amarelo Vibrante
+                        "background-dark": "#102215", // Aquele verde bem escuro do code.html
+                        "surface-dark": "#1a2c1f", // Um tom acima para cards
+                        "text-light": "#F9FAFB",
+                        "text-muted": "#9ca3af",
+                        "border-dark": "rgba(255, 255, 255, 0.1)"
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
                     }
-                } catch (error) {
-                    console.error("Erro ao conectar na API:", error);
-                    this.feedback = { msg: 'Não foi possível carregar os produtos.', tipo: 'error', erros: [] };
-                } finally {
-                    this.loadingLista = false;
-                }
-            },
-            
-            async salvarProduto() {
-                this.loading = true;
-                this.feedback = { msg: '', tipo: '', erros: [] };
-
-                try {
-                    const response = await fetch(`${API_URL}/produtos`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.novoProduto)
-                    });
-
-                    const dados = await response.json();
-
-                    if (response.ok) {
-                        this.feedback = { msg: 'Produto cadastrado com sucesso!', tipo: 'success', erros: [] };
-                        this.novoProduto = { titulo: '', preco: '', categoria: '' }; // Limpa formulário
-                        this.listarProdutos(); // Atualiza a lista na hora
-                    } else {
-                        // Captura erros da validação do backend
-                        this.feedback = { 
-                            msg: dados.mensagem || 'Erro ao cadastrar:', 
-                            tipo: 'error', 
-                            erros: dados.erros || [dados.erro || 'Verifique os dados'] 
-                        };
-                    }
-                } catch (error) {
-                    this.feedback = { msg: 'Erro de conexão com o servidor.', tipo: 'error', erros: [] };
-                } finally {
-                    this.loading = false;
                 }
             }
         }
-    }).mount('#app')
-</script>
+    </script>
 
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        /* Efeito de brilho no fundo inspirado no code.html */
+        .glow-effect {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-background-dark font-display text-text-light min-h-screen relative overflow-x-hidden selection:bg-primary selection:text-white">
+
+    <div class="fixed top-[-20%] left-[-10%] glow-effect"></div>
+    <div class="fixed bottom-[-20%] right-[-10%] glow-effect" style="background: radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, rgba(0,0,0,0) 70%);"></div>
+
+    <div id="app" class="relative z-10 container mx-auto px-4 py-8 lg:px-8 max-w-6xl">
+        
+        <header class="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 border-b border-border-dark pb-6">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-primary/20 rounded-xl">
+                    <span class="material-symbols-outlined text-primary text-3xl">eco</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">GreenEats <span class="text-primary">Admin</span></h1>
+                    <p class="text-text-muted text-sm">Gestão de Produtos Orgânicos</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="px-4 py-2 rounded-full bg-surface-dark border border-border-dark flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm text-secondary">inventory_2</span>
+                    <span class="text-sm font-semibold">{{ produtos.length }} Produtos</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid lg:grid-cols-3 gap-8">
+            
+            <section class="lg:col-span-1">
+                <div class="bg-surface-dark/80 backdrop-blur-xl border border-border-dark rounded-2xl p-6 shadow-xl sticky top-8">
+                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">add_circle</span>
+                        Novo Produto
+                    </h2>
+
+                    <div class="flex flex-col gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-text-muted mb-2">Nome do Produto</label>
+                            <input type="text" v-model="novoProduto.titulo" 
+                                class="w-full bg-background-dark/50 border border-border-dark rounded-lg px-4 py-3 text-white placeholder-text-muted/50 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                                placeholder="Ex: Cesta de Orgânicos">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-text-muted mb-2">Preço (R$)</label>
+                                <input type="number" step="0.01" v-model="novoProduto.preco"
+                                    class="w-full bg-background-dark/50 border border-border-dark rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                                    placeholder="0.00">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text-muted mb-2">Categoria</label>
+                                <select v-model="novoProduto.categoria"
+                                    class="w-full bg-background-dark/50 border border-border-dark rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none appearance-none cursor-pointer">
+                                    <option disabled value="">Selecione</option>
+                                    <option>Fruta</option>
+                                    <option>Legume</option>
+                                    <option>Verdura</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button @click="salvarProduto" :disabled="loading"
+                            class="mt-2 w-full bg-gradient-to-r from-primary to-green-600 hover:to-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/20 transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                            <span v-if="loading" class="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+                            <span v-else class="material-symbols-outlined text-xl">check</span>
+                            {{ loading ? 'Salvando...' : 'Cadastrar Produto' }}
+                        </button>
+
+                        <div v-if="feedback.msg" 
+                            :class="`p-4 rounded-xl text-sm font-medium text-center border ${feedback.tipo === 'success' ? 'bg-green-900/30 border-green-800 text-green-400' : 'bg-red-900/30 border-red-800 text-red-400'}`">
+                            {{ feedback.msg }}
+                            <ul v-if="feedback.erros.length" class="mt-2 text-xs text-left list-disc list-inside opacity-80">
+                                <li v-for="erro in feedback.erros">{{ erro }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lg:col-span-2">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">list_alt</span>
+                        Catálogo Atual
+                    </h2>
+                    <span v-if="loadingLista" class="text-sm text-primary animate-pulse">Atualizando...</span>
+                </div>
+
+                <div v-if="!loadingLista && produtos.length === 0" class="text-center py-20 bg-surface-dark/30 border border-dashed border-border-dark rounded-2xl">
+                    <span class="material-symbols-outlined text-4xl text-text-muted mb-2">shopping_basket</span>
+                    <p class="text-text-muted">Nenhum produto cadastrado.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div v-for="prod in produtos" :key="prod.id" 
+                        class="group bg-surface-dark border border-border-dark hover:border-primary/50 rounded-2xl p-5 transition-all hover:shadow-lg hover:shadow-primary/5 relative overflow-hidden">
+                        
+                        <div class="absolute top-4 right-4 z-10">
+                            <span :class="`px-3 py-1 rounded-full text-xs font-bold tracking-wide border ${getCategoriaColor(prod.categoria)}`">
+                                {{ prod.categoria }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-full bg-background-dark flex items-center justify-center shrink-0 border border-border-dark group-hover:border-primary/30 transition-colors">
+                                <span class="material-symbols-outlined text-2xl text-text-muted group-hover:text-primary transition-colors">
+                                    {{ getIcon(prod.categoria) }}
+                                </span>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-lg truncate text-white group-hover:text-primary transition-colors">{{ prod.titulo }}</h3>
+                                <div class="flex items-baseline gap-1 mt-1">
+                                    <span class="text-xs text-text-muted">R$</span>
+                                    <span class="text-2xl font-bold text-white">{{ formatPrice(prod.preco) }}</span>
+                                </div>
+                                <p class="text-xs text-text-muted mt-2 font-mono opacity-50 truncate">ID: {{ prod.id }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        // ⚠️ ATENÇÃO: Verifique se essa URL é a do seu Render atual!
+        const API_URL = 'https://greeneats-backend.onrender.com';
+
+        createApp({
+            data() {
+                return {
+                    produtos: [],
+                    novoProduto: { titulo: '', preco: '', categoria: '' },
+                    feedback: { msg: '', tipo: '', erros: [] },
+                    loading: false,
+                    loadingLista: false
+                }
+            },
+            mounted() {
+                this.listarProdutos()
+            },
+            methods: {
+                // Helpers de Estilo
+                getCategoriaColor(cat) {
+                    if(cat === 'Fruta') return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+                    if(cat === 'Legume') return 'bg-secondary/10 text-secondary border-secondary/20';
+                    return 'bg-primary/10 text-primary border-primary/20'; // Verdura
+                },
+                getIcon(cat) {
+                    if(cat === 'Fruta') return 'nutrition';
+                    if(cat === 'Legume') return 'eggplant'; // closest to legume/vegetable
+                    return 'grass'; // Verdura/folhas
+                },
+                formatPrice(val) {
+                    return parseFloat(val).toFixed(2).replace('.', ',');
+                },
+
+                // Lógica da API (Igual ao anterior, só mudou o visual)
+                async listarProdutos() {
+                    this.loadingLista = true;
+                    try {
+                        const response = await fetch(`${API_URL}/produtos`);
+                        if(response.ok) {
+                            this.produtos = await response.json();
+                        }
+                    } catch (error) {
+                        console.error("Erro API", error);
+                    } finally {
+                        this.loadingLista = false;
+                    }
+                },
+                
+                async salvarProduto() {
+                    this.loading = true;
+                    this.feedback = { msg: '', tipo: '', erros: [] };
+
+                    try {
+                        const response = await fetch(`${API_URL}/produtos`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.novoProduto)
+                        });
+
+                        const dados = await response.json();
+
+                        if (response.ok) {
+                            this.feedback = { msg: 'Produto adicionado ao catálogo!', tipo: 'success', erros: [] };
+                            this.novoProduto = { titulo: '', preco: '', categoria: '' };
+                            this.listarProdutos();
+                        } else {
+                            this.feedback = { 
+                                msg: dados.mensagem || 'Verifique os dados:', 
+                                tipo: 'error', 
+                                erros: dados.erros || [dados.erro] 
+                            };
+                        }
+                    } catch (error) {
+                        this.feedback = { msg: 'Erro de conexão.', tipo: 'error', erros: [] };
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
 </body>
 </html>
